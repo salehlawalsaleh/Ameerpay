@@ -1,38 +1,33 @@
-// netlify/functions/paystack.js
-import fetch from "node-fetch";
+// netlify/functions/paystack.js (TEMP DEBUG)
+exports.handler = async function(event) {
+  const headers = event.headers || {};
+  const method = event.httpMethod || "UNKNOWN";
+  const qs = event.queryStringParameters || {};
+  let body = event.body || null;
+  try { body = body ? JSON.parse(body) : null; } catch(e){ /* keep raw */ }
 
-export async function handler(event, context) {
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: "Method not allowed" }),
-    };
-  }
+  const envHas = !!process.env.PAYSTACK_SECRET;
+  const PAYSTACK_SECRET = envHas ? "[SET]" : "[NOT SET]";
 
-  try {
-    const { email, amount } = JSON.parse(event.body);
+  const payload = {
+    message: "DEBUG: paystack function received request",
+    method,
+    path: event.path,
+    query: qs,
+    headers: {
+      host: headers.host,
+      origin: headers.origin,
+      referer: headers.referer || headers.Referer || null,
+      "content-type": headers["content-type"] || headers["Content-Type"] || null,
+      "x-nf-path": headers["x-nf-path"] || null
+    },
+    body,
+    env_PAYSTACK_SECRET: PAYSTACK_SECRET
+  };
 
-    const response = await fetch("https://api.paystack.co/transaction/initialize", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email,
-        amount: amount * 100, // convert to kobo
-      }),
-    });
-
-    const data = await response.json();
-    return {
-      statusCode: 200,
-      body: JSON.stringify(data),
-    };
-  } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
-    };
-  }
-      }
+  return {
+    statusCode: 200,
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    body: JSON.stringify(payload, null, 2)
+  };
+};
